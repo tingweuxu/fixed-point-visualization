@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>「數」途同歸 - 棋盤不動點幾何規律探究系統</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Three.js for 3D simulation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Share+Tech+Mono&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0f172a;
+        }
+        .tech-font {
+            font-family: 'Share Tech Mono', monospace;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10b981;
+        }
+        /* Pulse Animation for Fixed Points */
+        @keyframes pulse-emerald {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+            50% {
+                transform: scale(1.08);
+                box-shadow: 0 0 12px 4px rgba(16, 185, 129, 0.4);
+            }
+        }
+        .fixed-point-pulse {
+            animation: pulse-emerald 2s infinite ease-in-out;
+        }
+        /* SVG Flow line dash movement */
+        @keyframes flow {
+            to {
+                stroke-dashoffset: -40;
+            }
+        }
+        .flow-path {
+            stroke-dasharray: 8, 4;
+            animation: flow 2s linear infinite;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col overflow-x-hidden">
+
+    <!-- Header Section -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex flex-wrap items-center justify-between shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-tr from-emerald-500 to-teal-400 p-2.5 rounded-xl shadow-lg shadow-emerald-500/20">
+                <i class="fa-solid var(--fa-chess-board, fa-table-cells) text-slate-950 text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-lg md:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-200">
+                    「數」途同歸
+                </h1>
+                <p class="text-xs text-slate-400 font-medium">
+                    矩形棋盤不同填數規則之不動點幾何規律探究
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4 mt-2 sm:mt-0">
+            <span class="text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-full font-semibold text-emerald-400 flex items-center gap-1.5 shadow-inner">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                第 66 屆中小學科展數學科
+            </span>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-grow p-4 lg:p-6 grid grid-cols-1 xl:grid-cols-12 gap-6 max-w-[1600px] mx-auto w-full">
+
+        <!-- LEFT CONTROL PANEL (4 Cols) -->
+        <section class="xl:col-span-4 flex flex-col gap-6">
+            
+            <!-- Board Presets & Custom Configuration -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-emerald-400"></i>
+                        棋盤設定與預設場景
+                    </h3>
+                    <span class="text-[10px] uppercase font-bold tracking-widest text-slate-500">Config</span>
+                </div>
+
+                <!-- Presets Grid -->
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    <button onclick="applyPreset(19, 31, 5, 8)" class="preset-btn px-3 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 hover:text-emerald-400 border border-slate-700/50 transition-all text-left">
+                        <div class="text-[10px] text-slate-400 font-medium">競賽原始題</div>
+                        <div class="text-sm font-bold">19 × 31 棋盤</div>
+                    </button>
+                    <button onclick="applyPreset(23, 16, 5, 8)" class="preset-btn px-3 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 hover:text-emerald-400 border border-slate-700/50 transition-all text-left">
+                        <div class="text-[10px] text-slate-400 font-medium">說明書逆推範例</div>
+                        <div class="text-sm font-bold">23 × 16 棋盤</div>
+                    </button>
+                    <button onclick="applyPreset(10, 10, 3, 3)" class="preset-btn px-3 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 hover:text-emerald-400 border border-slate-700/50 transition-all text-left">
+                        <div class="text-[10px] text-slate-400 font-medium">對角完美交會</div>
+                        <div class="text-sm font-bold">10 × 10 正方形</div>
+                    </button>
+                    <button onclick="applyPreset(5, 8, 3, 4)" class="preset-btn px-3 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 hover:text-emerald-400 border border-slate-700/50 transition-all text-left">
+                        <div class="text-[10px] text-slate-400 font-medium">斜向與邊界演示</div>
+                        <div class="text-sm font-bold">5 × 8 棋盤</div>
+                    </button>
+                </div>
+
+                <!-- Custom Parameters -->
+                <div class="space-y-4 border-t border-slate-800/80 pt-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-1.5">總列數 (R)</label>
+                            <div class="flex items-center space-x-2">
+                                <input type="number" id="inputR" min="2" max="60" value="19" onchange="onDimensionsChange()" class="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-center font-bold text-emerald-400 focus:outline-none transition-all">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-1.5">總行數 (C)</label>
+                            <div class="flex items-center space-x-2">
+                                <input type="number" id="inputC" min="2" max="60" value="31" onchange="onDimensionsChange()" class="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-center font-bold text-emerald-400 focus:outline-none transition-all">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-1.5">目標列座標 (r)</label>
+                            <input type="number" id="inputr" min="1" value="5" onchange="onTargetChange()" class="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-center font-bold text-teal-400 focus:outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 mb-1.5">目標行座標 (c)</label>
+                            <input type="number" id="inputc" min="1" value="8" onchange="onTargetChange()" class="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-center font-bold text-teal-400 focus:outline-none transition-all">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Double Even Rule Warning Box -->
+            <div id="evenEvenNotice" class="hidden bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 shadow-lg relative overflow-hidden transition-all duration-300">
+                <div class="absolute right-[-10px] bottom-[-20px] text-amber-500/5 text-8xl font-black">偶</div>
+                <div class="flex items-start gap-3">
+                    <div class="bg-amber-500/20 p-2 rounded-lg text-amber-400 mt-0.5">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-amber-300 text-sm">雙偶數座標排除定理成立</h4>
+                        <p class="text-xs text-amber-200/80 mt-1 leading-relaxed">
+                            檢測到目標座標為雙偶數 <span class="tech-font font-bold">(${r}, ${c})</span>。在科展論文「參之五、偶數列方向相反矛盾」中，已證實任何<b>雙偶數座標絕對不可能成為任何S型折返填寫規則</b>之不動點。
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reverse Deductive 5 Steps -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex-grow flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass-chart text-emerald-400"></i>
+                        逆向檢驗五步驟解析
+                    </h3>
+                    <span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-bold">Deduction</span>
+                </div>
+
+                <!-- Step-by-Step Accordion -->
+                <div class="space-y-3 overflow-y-auto flex-grow max-h-[420px] pr-1">
+                    
+                    <!-- Step 1 -->
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3.5">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span class="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold flex items-center justify-center">1</span>
+                            <span class="font-bold text-xs text-slate-300">建立填寫函數</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mb-2 leading-relaxed">
+                            計算該點於主流 7 種單一規則下的格點數值：
+                        </p>
+                        <div class="grid grid-cols-2 gap-1.5 text-[10px] tech-font">
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800/80 flex justify-between"><span class="text-slate-500">H_R:</span><span class="font-bold text-emerald-400" id="valHR">-</span></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800/80 flex justify-between"><span class="text-slate-500">H_C:</span><span class="font-bold text-emerald-400" id="valHC">-</span></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800/80 flex justify-between"><span class="text-slate-500">S_R:</span><span class="font-bold text-teal-400" id="valSR">-</span></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800/80 flex justify-between"><span class="text-slate-500">S_C:</span><span class="font-bold text-teal-400" id="valSC">-</span></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800/80 flex justify-between col-span-2"><span class="text-slate-500">D_λ (斜向上):</span><span class="font-bold text-amber-400" id="valD1">-</span></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800/80 flex justify-between col-span-2"><span class="text-slate-500">D_∠ (斜向下):</span><span class="font-bold text-amber-400" id="valD2">-</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3.5">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span class="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold flex items-center justify-center">2</span>
+                            <span class="font-bold text-xs text-slate-300">求解等式與共線性</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 leading-relaxed" id="step2Math">
+                            聯立比對公式：正在計算對角線比例式與斜率...
+                        </p>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3.5">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span class="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold flex items-center justify-center">3</span>
+                            <span class="font-bold text-xs text-slate-300">奇偶性限制分析</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 leading-relaxed" id="step3Math">
+                            比對當前座標的行列奇偶性質...
+                        </p>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3.5">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span class="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold flex items-center justify-center">4</span>
+                            <span class="font-bold text-xs text-slate-300">最大公因數計算 (g)</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1.5 text-[10px] tech-font text-slate-300">
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800/80"><span class="text-slate-500">g1(R-1, C-1) = </span><span class="font-bold" id="valG1">-</span></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800/80"><span class="text-slate-500">g2(R-1, C+1) = </span><span class="font-bold" id="valG2">-</span></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800/80"><span class="text-slate-500">g3(R+1, C-1) = </span><span class="font-bold" id="valG3">-</span></div>
+                            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800/80"><span class="text-slate-500">g4(R+1, C+1) = </span><span class="font-bold" id="valG4">-</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5 -->
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-3.5">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span class="w-5 h-5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold flex items-center justify-center">5</span>
+                            <span class="font-bold text-xs text-slate-300">參數一般式判定</span>
+                        </div>
+                        <p class="text-[11px] text-slate-300 leading-relaxed font-semibold" id="step5Conclusion">
+                            正在載入判定...
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CENTER CHESSBOARD WORKSPACE (5 Cols) -->
+        <section class="xl:col-span-5 flex flex-col gap-6">
+            
+            <!-- Dashboard Display Tabs -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 flex gap-2">
+                <button onclick="switchWorkspaceTab('2d')" id="tab2d" class="workspace-tab flex-1 py-2.5 text-xs font-bold rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center gap-2 shadow-lg transition-all duration-300">
+                    <i class="fa-solid fa-chess-board"></i>
+                    2D 平面棋盤比對
+                </button>
+                <button onclick="switchWorkspaceTab('3d')" id="tab3d" class="workspace-tab flex-1 py-2.5 text-xs font-bold rounded-xl bg-slate-800 text-slate-400 hover:text-slate-100 flex items-center justify-center gap-2 transition-all duration-300">
+                    <i class="fa-solid fa-cubes-radial"></i>
+                    3D 空間推廣
+                </button>
+            </div>
+
+            <!-- Workspace Card -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex-grow flex flex-col min-h-[550px] relative">
+                
+                <!-- 2D View -->
+                <div id="view2d" class="flex-grow flex flex-col h-full">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                                互動式棋盤與填寫路徑
+                            </h3>
+                            <p class="text-[10px] text-slate-400 mt-0.5">點擊任意方格可快速逆向檢驗不動點規則</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <!-- Toggle Flowline Button -->
+                            <button onclick="toggleFlowlines()" id="btnFlow" class="px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 flex items-center gap-1.5 transition-all">
+                                <i class="fa-solid fa-circle-nodes text-emerald-400"></i>
+                                <span>顯示路徑流</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Chessboard Wrapper -->
+                    <div class="flex-grow flex items-center justify-center relative p-2 bg-slate-950/80 border border-slate-800/80 rounded-xl overflow-hidden min-h-[380px]">
+                        <!-- Absolute SVG overlay for flow paths -->
+                        <svg id="svgOverlay" class="absolute inset-0 w-full h-full pointer-events-none z-10 hidden"></svg>
+                        
+                        <!-- Grid Container -->
+                        <div id="boardContainer" class="max-w-full max-h-full overflow-auto p-4 flex items-center justify-center">
+                            <!-- Board will be rendered dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Board Info and Legends -->
+                    <div class="mt-4 grid grid-cols-3 gap-2.5 text-center text-xs">
+                        <div class="bg-slate-950/50 p-2 rounded-xl border border-slate-800 flex flex-col justify-center">
+                            <span class="text-slate-500 text-[10px] font-medium uppercase">目前目標</span>
+                            <span class="font-bold text-emerald-400 mt-0.5 tech-font" id="legendTarget">(1, 1)</span>
+                        </div>
+                        <div class="bg-slate-950/50 p-2 rounded-xl border border-slate-800 flex flex-col justify-center">
+                            <span class="text-slate-500 text-[10px] font-medium uppercase">不動點總數 N</span>
+                            <span class="font-bold text-teal-400 mt-0.5 tech-font" id="legendCount">0</span>
+                        </div>
+                        <div class="bg-slate-950/50 p-2 rounded-xl border border-slate-800 flex flex-col justify-center">
+                            <span class="text-slate-500 text-[10px] font-medium uppercase">最大值比對</span>
+                            <span class="font-bold text-amber-400 mt-0.5 tech-font" id="legendGCD">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3D View -->
+                <div id="view3d" class="hidden flex-grow flex flex-col h-full relative">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                                三維空間不動點規律 L × W × H
+                            </h3>
+                            <p class="text-[10px] text-slate-400 mt-0.5">滑鼠拖曳可旋轉視角、滾輪可縮放</p>
+                        </div>
+                        <span class="text-[11px] font-semibold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">3D對角共線</span>
+                    </div>
+
+                    <!-- Three.js Container -->
+                    <div id="threeContainer" class="flex-grow w-full bg-slate-950 rounded-xl relative overflow-hidden min-h-[380px] border border-slate-800">
+                        <!-- Custom rotation instruction overlay -->
+                        <div class="absolute bottom-2 left-2 bg-slate-900/90 text-[10px] text-slate-400 px-2.5 py-1.5 rounded-lg border border-slate-800/80 pointer-events-none z-10 flex flex-col gap-1">
+                            <span><i class="fa-solid fa-arrows-to-eye text-emerald-400 mr-1"></i>左鍵拖曳：旋轉</span>
+                            <span><i class="fa-solid fa-magnifying-glass-plus text-emerald-400 mr-1"></i>滾輪滾動：縮放</span>
+                        </div>
+                    </div>
+
+                    <!-- 3D Equations Summary -->
+                    <div class="mt-4 bg-slate-950/50 border border-slate-800/60 p-3 rounded-xl">
+                        <h4 class="text-xs font-bold text-slate-300 mb-1.5 flex items-center gap-1.5">
+                            <i class="fa-solid fa-square-root-variable text-emerald-400"></i>
+                            空間不動點代數不變性
+                        </h4>
+                        <p class="text-[11px] text-slate-400 leading-relaxed">
+                            推廣至 L × W × H，空間體對角線方程為：
+                            <span class="tech-font text-emerald-400 font-bold ml-1">(x - 1)/(L - 1) = (y - 1)/(W - 1) = (z - 1)/(H - 1)</span>。
+                            此處不動點依然共線，總數量為 <span class="tech-font text-emerald-400 font-bold">gcd(L-1, W-1, H-1) + 1</span>。
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- RIGHT RULE COMPARISON SELECTOR PANEL (3 Cols) -->
+        <section class="xl:col-span-3 flex flex-col gap-4">
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl flex-grow flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-code-compare text-emerald-400"></i>
+                        比較規則對照
+                    </h3>
+                    <span class="text-[10px] uppercase font-bold tracking-widest text-slate-500">Rules</span>
+                </div>
+
+                <!-- Compare Rule Buttons Stack -->
+                <div class="space-y-2 flex-grow overflow-y-auto pr-1">
+                    
+                    <!-- HR vs HC -->
+                    <button onclick="selectRuleCompare('HR_HC')" id="btn_HR_HC" class="rule-compare-btn w-full p-3 rounded-xl border text-left flex flex-col gap-1 transition-all duration-300 bg-emerald-500/10 border-emerald-500/30">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-black text-slate-200 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                H<sub>R</sub> vs H<sub>C</sub>
+                            </span>
+                            <span class="text-[9px] tech-font bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold uppercase">標準對角</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 leading-relaxed">
+                            對角線上不動點，數量為 g<sub>1</sub> + 1，首項為 1、公差為 (RC-1)/g<sub>1</sub> 的等差數列。
+                        </p>
+                    </button>
+
+                    <!-- HR vs SR -->
+                    <button onclick="selectRuleCompare('HR_SR')" id="btn_HR_SR" class="rule-compare-btn w-full p-3 rounded-xl border text-left flex flex-col gap-1 transition-all duration-300 bg-slate-950/60 border-slate-800/80 hover:border-slate-700">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-black text-slate-300 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-slate-600" id="dot_HR_SR"></span>
+                                H<sub>R</sub> vs S<sub>R</sub>
+                            </span>
+                            <span class="text-[9px] tech-font bg-slate-850 text-slate-400 px-1.5 py-0.5 rounded font-bold uppercase">列向比對</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 leading-relaxed">
+                            所有奇數列皆為不動點；偶數列只有在 C 為奇數時的中線點。
+                        </p>
+                    </button>
+
+                    <!-- HC vs SC -->
+                    <button onclick="selectRuleCompare('HC_SC')" id="btn_HC_SC" class="rule-compare-btn w-full p-3 rounded-xl border text-left flex flex-col gap-1 transition-all duration-300 bg-slate-950/60 border-slate-800/80 hover:border-slate-700">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-black text-slate-300 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-slate-600" id="dot_HC_SC"></span>
+                                H<sub>C</sub> vs S<sub>C</sub>
+                            </span>
+                            <span class="text-[9px] tech-font bg-slate-850 text-slate-400 px-1.5 py-0.5 rounded font-bold uppercase">行向比對</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 leading-relaxed">
+                            所有奇數行皆為不動點；偶數行只有在 R 為奇數時的中線點。
+                        </p>
+                    </button>
+
+                    <!-- HR vs SC -->
+                    <button onclick="selectRuleCompare('HR_SC')" id="btn_HR_SC" class="rule-compare-btn w-full p-3 rounded-xl border text-left flex flex-col gap-1 transition-all duration-300 bg-slate-950/60 border-slate-800/80 hover:border-slate-700">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-black text-slate-300 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-slate-600" id="dot_HR_SC"></span>
+                                H<sub>R</sub> vs S<sub>C</sub>
+                            </span>
+                            <span class="text-[9px] tech-font bg-slate-850 text-slate-400 px-1.5 py-0.5 rounded font-bold uppercase">雙直線共線</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 leading-relaxed">
+                            不動點分為兩組共線直線（c 奇、c 偶），其數量極大值發生在奇數正方形。
+                        </p>
+                    </button>
+
+                    <!-- HC vs SR -->
+                    <button onclick="selectRuleCompare('HC_SR')" id="btn_HC_SR" class="rule-compare-btn w-full p-3 rounded-xl border text-left flex flex-col gap-1 transition-all duration-300 bg-slate-950/60 border-slate-800/80 hover:border-slate-700">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-black text-slate-300 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-slate-600" id="dot_HC_SR"></span>
+                                H<sub>C</sub> vs S<sub>R</sub>
+                            </span>
+                            <span class="text-[9px] tech-font bg-slate-850 text-slate-400 px-1.5 py-0.5 rounded font-bold uppercase">轉置雙共線</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 leading-relaxed">
+                            與上個比較成轉置對稱關係。不動點分裝兩組共線點集（r 奇、r 偶）。
+                        </p>
+                    </button>
+
+                    <!-- SR vs SC -->
+                    <button onclick="selectRuleCompare('SR_SC')" id="btn_SR_SC" class="rule-compare-btn w-full p-3 rounded-xl border text-left flex flex-col gap-1 transition-all duration-300 bg-slate-950/60 border-slate-800/80 hover:border-slate-700">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-black text-slate-300 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-slate-600" id="dot_SR_SC"></span>
+                                S<sub>R</sub> vs S<sub>C</sub>
+                            </span>
+                            <span class="text-[9px] tech-font bg-slate-850 text-slate-400 px-1.5 py-0.5 rounded font-bold uppercase">四重共線點</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 leading-relaxed">
+                            同時受行列折返雙重奇偶性條件限制，分佈在四條共線於棋盤中心的直線。
+                        </p>
+                    </button>
+
+                    <!-- D_lambda vs D_angle -->
+                    <button onclick="selectRuleCompare('D_D')" id="btn_D_D" class="rule-compare-btn w-full p-3 rounded-xl border text-left flex flex-col gap-1 transition-all duration-300 bg-slate-950/60 border-slate-800/80 hover:border-slate-700">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-black text-slate-300 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-slate-600" id="dot_D_D"></span>
+                                D<sub>λ</sub> vs D<sub>∠</sub>
+                            </span>
+                            <span class="text-[9px] tech-font bg-slate-850 text-slate-400 px-1.5 py-0.5 rounded font-bold uppercase">斜向分割</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 leading-relaxed">
+                            依邊界限制分為三區段討論不動點，為具有強烈結構對稱與等差特質的點集。
+                        </p>
+                    </button>
+
+                </div>
+
+                <!-- Selected Compare Theory Overview -->
+                <div class="mt-4 bg-slate-950/80 border border-slate-800 p-4 rounded-xl">
+                    <h4 class="text-xs font-bold text-slate-300 mb-1 flex items-center justify-between">
+                        <span>目前比對物理模型公式</span>
+                        <i class="fa-solid fa-signature text-emerald-400"></i>
+                    </h4>
+                    <p id="theoryText" class="text-[10px] text-slate-400 leading-relaxed">
+                        選擇一個比較模式以查看其數學一般式和不動點公式...
+                    </p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 bg-slate-950/80 px-6 py-4 text-center text-xs text-slate-500">
+        <p>© 中華民國第66屆中小學科學展覽會 參展作品 ──「數」途同歸：矩形棋盤不同填數規則之不動點幾何規律探究 | 國中組數學科</p>
+    </footer>
+
+    <!-- Core Business Logic Script -->
+    <script>
+        // App State
+        let R = 19;
+        let C = 31;
+        let r = 5;
+        let c = 8;
+        let currentRuleCompare = 'HR_HC';
+        let showFlowlines = false;
+        let workspaceTab = '2d';
+
+        // Cache generated matrices
+        let cachedMatrices = {
+            HR: null,
+            HC: null,
+            SR: null,
+            SC: null,
+            D1: null, // D_lambda
+            D2: null  // D_angle
+        };
+
+        // 3D Scene Variables
+        let threeScene, threeCamera, threeRenderer, threeGridGroup;
+        let isThreeInitialized = false;
+
+        // GCD helper
+        function gcd(a, b) {
+            return b === 0 ? Math.abs(a) : gcd(b, a % b);
+        }
+
+        // Initialize state
+        window.onload = function() {
+            applyPreset(19, 31, 5, 8);
+            initThreeJS();
+        };
+
+        // Tab Workspace switcher
+        function switchWorkspaceTab(tab) {
+            workspaceTab = tab;
+            const tab2d = document.getElementById('tab2d');
+            const tab3d = document.getElementById('tab3d');
+            const view2d = document.getElementById('view2d');
+            const view3d = document.getElementById('view3d');
+
+            if (tab === '2d') {
+                tab2d.className = "workspace-tab flex-1 py-2.5 text-xs font-bold rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center gap-2 shadow-lg transition-all duration-300";
+                tab3d.className = "workspace-tab flex-1 py-2.5 text-xs font-bold rounded-xl bg-slate-800 text-slate-400 hover:text-slate-100 flex items-center justify-center gap-2 transition-all duration-300";
+                view2d.classList.remove('hidden');
+                view3d.classList.add('hidden');
+            } else {
+                tab3d.className = "workspace-tab flex-1 py-2.5 text-xs font-bold rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center gap-2 shadow-lg transition-all duration-300";
+                tab2d.className = "workspace-tab flex-1 py-2.5 text-xs font-bold rounded-xl bg-slate-800 text-slate-400 hover:text-slate-100 flex items-center justify-center gap-2 transition-all duration-300";
+                view3d.classList.remove('hidden');
+                view2d.classList.add('hidden');
+                
+                // Force 3D resize to container
+                if (threeRenderer && threeRenderer.domElement) {
+                    const container = document.getElementById('threeContainer');
+                    threeRenderer.setSize(container.clientWidth, container.clientHeight);
+                }
+                updateThreeScene();
+            }
+        }
+
+        // Apply a Preset Configurations
+        function applyPreset(presetR, presetC, presetr, presetc) {
+            R = presetR;
+            C = presetC;
+            r = presetr;
+            c = presetc;
+
+            document.getElementById('inputR').value = R;
+            document.getElementById('inputC').value = C;
+            document.getElementById('inputr').value = r;
+            document.getElementById('inputc').value = c;
+
+            onDimensionsChange();
+        }
+
+        // On chessboard dimensions changed
+        function onDimensionsChange() {
+            R = parseInt(document.getElementById('inputR').value) || 2;
+            C = parseInt(document.getElementById('inputC').value) || 2;
+            
+            // Constrain Inputs
+            if (R < 2) R = 2;
+            if (R > 60) R = 60;
+            if (C < 2) C = 2;
+            if (C > 60) C = 60;
+
+            document.getElementById('inputR').value = R;
+            document.getElementById('inputC').value = C;
+
+            // Target boundaries constraints
+            if (r > R) r = R;
+            if (c > C) c = C;
+            document.getElementById('inputr').value = r;
+            document.getElementById('inputc').value = c;
+            document.getElementById('inputr').max = R;
+            document.getElementById('inputc').max = C;
+
+            generateMatrices();
+            updateDashboard();
+        }
+
+        // Target Coordinate changed
+        function onTargetChange() {
+            r = parseInt(document.getElementById('inputr').value) || 1;
+            c = parseInt(document.getElementById('inputc').value) || 1;
+
+            if (r < 1) r = 1;
+            if (r > R) r = R;
+            if (c < 1) c = 1;
+            if (c > C) c = C;
+
+            document.getElementById('inputr').value = r;
+            document.getElementById('inputc').value = c;
+
+            updateDashboard();
+        }
+
+        // Rule compare selected
+        function selectRuleCompare(type) {
+            currentRuleCompare = type;
+            
+            // Update Active buttons classes
+            document.querySelectorAll('.rule-compare-btn').forEach(btn => {
+                btn.className = "rule-compare-btn w-full p-3 rounded-xl border text-left flex flex-col gap-1 transition-all duration-300 bg-slate-950/60 border-slate-800/80 hover:border-slate-700";
+            });
+            document.querySelectorAll('.rule-compare-btn span span').forEach(dot => {
+                dot.className = "w-2 h-2 rounded-full bg-slate-600";
+            });
+
+            const activeBtn = document.getElementById(`btn_${type}`);
+            if (activeBtn) {
+                activeBtn.className = "rule-compare-btn w-full p-3 rounded-xl border text-left flex flex-col gap-1 transition-all duration-300 bg-emerald-500/10 border-emerald-500/30";
+                const activeDot = document.getElementById(`dot_${type}`);
+                if (activeDot) activeDot.className = "w-2 h-2 rounded-full bg-emerald-400";
+            }
+
+            updateDashboard();
+        }
+
+        // Generate full matrices to support all rule combinations dynamically
+        function generateMatrices() {
+            cachedMatrices.HR = Array.from({ length: R }, (_, i) => Array.from({ length: C }, (_, j) => C * i + (j + 1)));
+            cachedMatrices.HC = Array.from({ length: R }, (_, i) => Array.from({ length: C }, (_, j) => R * j + (i + 1)));
+            
+            cachedMatrices.SR = Array.from({ length: R }, (_, i) => {
+                const rowNum = i + 1;
+                return Array.from({ length: C }, (_, j) => {
+                    const colNum = j + 1;
+                    if (rowNum % 2 !== 0) {
+                        return C * i + colNum;
+                    } else {
+                        return C * i + (C - colNum + 1);
+                    }
+                });
+            });
+
+            cachedMatrices.SC = Array.from({ length: R }, (_, i) => {
+                const rowNum = i + 1;
+                return Array.from({ length: C }, (_, j) => {
+                    const colNum = j + 1;
+                    if (colNum % 2 !== 0) {
+                        return R * j + rowNum;
+                    } else {
+                        return R * j + (R - rowNum + 1);
+                    }
+                });
+            });
+
+            // Diagonal Matrices Generator
+            cachedMatrices.D1 = getDiagonalMatrix(R, C, 'lambda');
+            cachedMatrices.D2 = getDiagonalMatrix(R, C, 'angle');
+        }
+
+        // Diagonal matrix filler
+        function getDiagonalMatrix(numRows, numCols, type) {
+            const matrix = Array.from({ length: numRows }, () => Array(numCols).fill(0));
+            const groups = {};
+            for (let rIdx = 1; rIdx <= numRows; rIdx++) {
+                for (let cIdx = 1; cIdx <= numCols; cIdx++) {
+                    const s = rIdx + cIdx;
+                    if (!groups[s]) groups[s] = [];
+                    groups[s].push({ r: rIdx, c: cIdx });
+                }
+            }
+            let count = 1;
+            const sortedSums = Object.keys(groups).map(Number).sort((a, b) => a - b);
+            for (const s of sortedSums) {
+                const cells = groups[s];
+                if (type === 'lambda') {
+                    // Sort by r descending (bottom-left to top-right)
+                    cells.sort((a, b) => b.r - a.r);
+                } else {
+                    // Sort by r ascending (top-right to bottom-left)
+                    cells.sort((a, b) => a.r - b.r);
+                }
+                for (const cell of cells) {
+                    matrix[cell.r - 1][cell.c - 1] = count++;
+                }
+            }
+            return matrix;
+        }
+
+        // Check if a coordinate is a fixed point for active comparison
+        function checkFixedPointAt(row, col) {
+            const rIdx = row - 1;
+            const cIdx = col - 1;
+            switch(currentRuleCompare) {
+                case 'HR_HC': return cachedMatrices.HR[rIdx][cIdx] === cachedMatrices.HC[rIdx][cIdx];
+                case 'HR_SR': return cachedMatrices.HR[rIdx][cIdx] === cachedMatrices.SR[rIdx][cIdx];
+                case 'HC_SC': return cachedMatrices.HC[rIdx][cIdx] === cachedMatrices.SC[rIdx][cIdx];
+                case 'HR_SC': return cachedMatrices.HR[rIdx][cIdx] === cachedMatrices.SC[rIdx][cIdx];
+                case 'HC_SR': return cachedMatrices.HC[rIdx][cIdx] === cachedMatrices.SR[rIdx][cIdx];
+                case 'SR_SC': return cachedMatrices.SR[rIdx][cIdx] === cachedMatrices.SC[rIdx][cIdx];
+                case 'D_D':   return cachedMatrices.D1[rIdx][cIdx] === cachedMatrices.D2[rIdx][cIdx];
+            }
+            return false;
+        }
+
+        // Get value for current comparison
+        function getCellValues(row, col) {
+            const rIdx = row - 1;
+            const cIdx = col - 1;
+            let valA = 0, valB = 0;
+            switch(currentRuleCompare) {
+                case 'HR_HC': valA = cachedMatrices.HR[rIdx][cIdx]; valB = cachedMatrices.HC[rIdx][cIdx]; break;
+                case 'HR_SR': valA = cachedMatrices.HR[rIdx][cIdx]; valB = cachedMatrices.SR[rIdx][cIdx]; break;
+                case 'HC_SC': valA = cachedMatrices.HC[rIdx][cIdx]; valB = cachedMatrices.SC[rIdx][cIdx]; break;
+                case 'HR_SC': valA = cachedMatrices.HR[rIdx][cIdx]; valB = cachedMatrices.SC[rIdx][cIdx]; break;
+                case 'HC_SR': valA = cachedMatrices.HC[rIdx][cIdx]; valB = cachedMatrices.SR[rIdx][cIdx]; break;
+                case 'SR_SC': valA = cachedMatrices.SR[rIdx][cIdx]; valB = cachedMatrices.SC[rIdx][cIdx]; break;
+                case 'D_D':   valA = cachedMatrices.D1[rIdx][cIdx]; valB = cachedMatrices.D2[rIdx][cIdx]; break;
+            }
+            return { valA, valB };
+        }
+
+        // Update complete UI Dashboard
+        function updateDashboard() {
+            // Update Legend & Header Targets
+            document.getElementById('legendTarget').innerText = `(${r}, ${c})`;
+            
+            // Check Even Even exclusion status
+            const isRowOdd = (r % 2 !== 0);
+            const isColOdd = (c % 2 !== 0);
+            const isDoubleEven = (!isRowOdd && !isColOdd);
+            const evenEvenNotice = document.getElementById('evenEvenNotice');
+            if (isDoubleEven) {
+                evenEvenNotice.classList.remove('hidden');
+            } else {
+                evenEvenNotice.classList.add('hidden');
+            }
+
+            // Calculate active fixed points list & render board
+            renderChessboard();
+
+            // Run the 5 Reverse Deductive Steps
+            updateReverseSteps();
+
+            // Update 3D scene if visual
+            if (workspaceTab === '3d') {
+                updateThreeScene();
+            }
+        }
+
+        // Render interactive 2D Chessboard
+        function renderChessboard() {
+            const container = document.getElementById('boardContainer');
+            container.innerHTML = "";
+
+            // Dynamic cell sizing based on board dimensions to prevent overflow
+            const containerWidth = container.clientWidth || 500;
+            const size = Math.max(22, Math.min(48, Math.floor((containerWidth - 60) / C)));
+
+            const table = document.createElement('div');
+            table.className = "grid gap-0.5 border-4 border-slate-900 rounded-xl bg-slate-950 p-1 select-none overflow-hidden";
+            table.style.gridTemplateColumns = `repeat(${C}, minmax(0, 1fr))`;
+
+            let fixedPointCount = 0;
+
+            for (let i = 1; i <= R; i++) {
+                for (let j = 1; j <= C; j++) {
+                    const isTarget = (i === r && j === c);
+                    const isFixed = checkFixedPointAt(i, j);
+                    if (isFixed) fixedPointCount++;
+
+                    const cell = document.createElement('div');
+                    cell.style.width = `${size}px`;
+                    cell.style.height = `${size}px`;
+                    
+                    // Base classes
+                    let bgClass = "bg-slate-900/60";
+                    let borderClass = "border border-slate-800/40";
+                    let textClass = "text-slate-500 font-bold text-[9px]";
+                    
+                    if ((i + j) % 2 === 0) {
+                        bgClass = "bg-slate-850/40";
+                    }
+
+                    // Highlights
+                    if (isFixed) {
+                        bgClass = "bg-emerald-500/15";
+                        borderClass = "border border-emerald-500/50";
+                        textClass = "text-emerald-400 font-black text-[10px] fixed-point-pulse z-20";
+                    }
+
+                    if (isTarget) {
+                        bgClass = "bg-teal-500/40";
+                        borderClass = "border-2 border-teal-400 shadow-lg shadow-teal-500/20";
+                        textClass = "text-teal-200 font-black text-[10px] scale-105 z-30";
+                    }
+
+                    cell.className = `flex items-center justify-center cursor-pointer transition-all hover:bg-slate-700/50 hover:scale-105 relative rounded ${bgClass} ${borderClass} ${textClass}`;
+                    
+                    // Show Rule A's value on cell for readability
+                    const { valA } = getCellValues(i, j);
+                    cell.innerText = valA;
+
+                    // Click event to inspect coordinates
+                    cell.setAttribute('onclick', `inspectCoordinates(${i}, ${j})`);
+                    table.appendChild(cell);
+                }
+            }
+
+            container.appendChild(table);
+
+            // Update Legends
+            document.getElementById('legendCount').innerText = fixedPointCount;
+            const g1 = gcd(R - 1, C - 1);
+            document.getElementById('legendGCD').innerText = `g1 = ${g1}`;
+
+            // Draw flow paths if toggle on
+            drawPathOverlays();
+        }
+
+        // Change target via board interaction click
+        function inspectCoordinates(row, col) {
+            r = row;
+            c = col;
+            document.getElementById('inputr').value = r;
+            document.getElementById('inputc').value = c;
+            updateDashboard();
+        }
+
+        // Toggle flow path line display
+        function toggleFlowlines() {
+            showFlowlines = !showFlowlines;
+            const btn = document.getElementById('btnFlow');
+            if (showFlowlines) {
+                btn.className = "px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-emerald-500 text-slate-950 flex items-center gap-1.5 transition-all shadow-lg shadow-emerald-500/20";
+                document.getElementById('svgOverlay').classList.remove('hidden');
+            } else {
+                btn.className = "px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 flex items-center gap-1.5 transition-all";
+                document.getElementById('svgOverlay').classList.add('hidden');
+            }
+            renderChessboard();
+        }
+
+        // Draw SVG flow line paths over grid cells
+        function drawPathOverlays() {
+            const svg = document.getElementById('svgOverlay');
+            svg.innerHTML = "";
+            if (!showFlowlines) return;
+
+            const boardContainer = document.getElementById('boardContainer');
+            const cells = boardContainer.querySelectorAll('.grid > div');
+            if (cells.length === 0) return;
+
+            // Generate Path Points dynamically matching active ruleset comparison
+            let points = [];
+            
+            // Just display Rule A flow for visual simplicity
+            let ruleToDraw = 'HR';
+            if (currentRuleCompare === 'HC_SC' || currentRuleCompare === 'HC_SR') ruleToDraw = 'HC';
+            if (currentRuleCompare === 'SR_SC') ruleToDraw = 'SR';
+            if (currentRuleCompare === 'D_D') ruleToDraw = 'D1';
+
+            const containerRect = boardContainer.getBoundingClientRect();
+
+            if (ruleToDraw === 'HR' || ruleToDraw === 'SR') {
+                for (let i = 0; i < R; i++) {
+                    const isEvenRow = (i % 2 !== 0);
+                    if (ruleToDraw === 'SR' && isEvenRow) {
+                        // SR S-Type: Right to left
+                        for (let j = C - 1; j >= 0; j--) {
+                            const index = i * C + j;
+                            const rect = cells[index].getBoundingClientRect();
+                            points.push({
+                                x: rect.left - containerRect.left + rect.width / 2,
+                                y: rect.top - containerRect.top + rect.height / 2
+                            });
+                        }
+                    } else {
+                        // Standard Rowwise: Left to right
+                        for (let j = 0; j < C; j++) {
+                            const index = i * C + j;
+                            const rect = cells[index].getBoundingClientRect();
+                            points.push({
+                                x: rect.left - containerRect.left + rect.width / 2,
+                                y: rect.top - containerRect.top + rect.height / 2
+                            });
+                        }
+                    }
+                }
+            } else if (ruleToDraw === 'HC') {
+                for (let j = 0; j < C; j++) {
+                    for (let i = 0; i < R; i++) {
+                        const index = i * C + j;
+                        const rect = cells[index].getBoundingClientRect();
+                        points.push({
+                            x: rect.left - containerRect.left + rect.width / 2,
+                            y: rect.top - containerRect.top + rect.height / 2
+                        });
+                    }
+                }
+            } else if (ruleToDraw === 'D1') {
+                // Diagonals lambda: group by sums
+                const groups = {};
+                for (let row = 0; row < R; row++) {
+                    for (let col = 0; col < C; col++) {
+                        const s = row + col;
+                        if (!groups[s]) groups[s] = [];
+                        groups[s].push({ row, col });
+                    }
+                }
+                const sortedSums = Object.keys(groups).map(Number).sort((a, b) => a - b);
+                for (const s of sortedSums) {
+                    const sortedCells = groups[s].sort((a, b) => b.row - a.row); // bottom-left to top-right
+                    for (const cell of sortedCells) {
+                        const index = cell.row * C + cell.col;
+                        const rect = cells[index].getBoundingClientRect();
+                        points.push({
+                            x: rect.left - containerRect.left + rect.width / 2,
+                            y: rect.top - containerRect.top + rect.height / 2
+                        });
+                    }
+                }
+            }
+
+            if (points.length < 2) return;
+
+            // Draw beautiful flowing path
+            let pathD = `M ${points[0].x} ${points[0].y}`;
+            for (let k = 1; k < points.length; k++) {
+                pathD += ` L ${points[k].x} ${points[k].y}`;
+            }
+
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("d", pathD);
+            path.setAttribute("fill", "none");
+            path.setAttribute("stroke", "url(#glowGradient)");
+            path.setAttribute("stroke-width", "2.5");
+            path.setAttribute("class", "flow-path");
+            
+            // Add gradient definition
+            const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+            const grad = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+            grad.setAttribute("id", "glowGradient");
+            grad.setAttribute("x1", "0%");
+            grad.setAttribute("y1", "0%");
+            grad.setAttribute("x2", "100%");
+            grad.setAttribute("y2", "100%");
+            
+            const stop1 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+            stop1.setAttribute("offset", "0%");
+            stop1.setAttribute("stop-color", "#34d399"); // Emerald
+            
+            const stop2 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+            stop2.setAttribute("offset", "100%");
+            stop2.setAttribute("stop-color", "#2dd4bf"); // Teal
+
+            grad.appendChild(stop1);
+            grad.appendChild(stop2);
+            defs.appendChild(grad);
+            svg.appendChild(defs);
+            svg.appendChild(path);
+        }
+
+        // Update step-by-step deductive steps on Left Column
+        function updateReverseSteps() {
+            const rIdx = r - 1;
+            const cIdx = c - 1;
+
+            // Step 1: Populate cell numbers
+            document.getElementById('valHR').innerText = cachedMatrices.HR[rIdx][cIdx];
+            document.getElementById('valHC').innerText = cachedMatrices.HC[rIdx][cIdx];
+            document.getElementById('valSR').innerText = cachedMatrices.SR[rIdx][cIdx];
+            document.getElementById('valSC').innerText = cachedMatrices.SC[rIdx][cIdx];
+            document.getElementById('valD1').innerText = cachedMatrices.D1[rIdx][cIdx];
+            document.getElementById('valD2').innerText = cachedMatrices.D2[rIdx][cIdx];
+
+            // Step 2: Linear equation alignment checking
+            const step2 = document.getElementById('step2Math');
+            const onMainDiag = ((r - 1) * (C - 1) === (c - 1) * (R - 1));
+            const subDiag1 = ((r - 1) * (C - 1) === c * (R - 1)); // Point Set II for HR vs SC
+            const subDiag2 = (r * (C - 1) === (c - 1) * (R + 1)); 
+
+            let step2Text = `格點位置：${onMainDiag ? "✨ 落在主對角線上！" : "此點偏離主對角線位置。"}<br>`;
+            step2Text += `主比例檢驗式: <span class="tech-font text-emerald-400">(r - 1)(C - 1) = (c - 1)(R - 1)</span><br>`;
+            step2Text += `計算值：<span class="tech-font">${(r - 1) * (C - 1)}</span> vs <span class="tech-font">${(c - 1) * (R - 1)}</span> (${onMainDiag ? "等式相等" : "等式不相等"})`;
+            step2.innerHTML = step2Text;
+
+            // Step 3: Odd/Even constraints checking
+            const step3 = document.getElementById('step3Math');
+            const rOdd = (r % 2 !== 0);
+            const cOdd = (c % 2 !== 0);
+            let step3Text = `列座標 r = ${r} 為<span class="text-teal-400 font-bold">${rOdd ? "奇數" : "偶數"}</span>。`;
+            step3Text += `行座標 c = ${c} 為<span class="text-teal-400 font-bold">${cOdd ? "奇數" : "偶數"}</span>。<br>`;
+            if (!rOdd && !cOdd) {
+                step3Text += `<span class="text-amber-400 font-bold">⚠️ 雙偶數排除：</span>因行列皆偶，奇偶分析排除此點，任何S型規則下絕不為不動點。`;
+            } else if (rOdd) {
+                step3Text += `因為列奇數，若採用 S<sub>R</sub> 型折返規則，不產生奇偶矛盾。`;
+            } else {
+                step3Text += `行偶數，折返方向與標準方向相反，不滿足標準 S 型對角特徵。`;
+            }
+            step3.innerHTML = step3Text;
+
+            // Step 4: GCD calculations
+            const g1 = gcd(R - 1, C - 1);
+            const g2 = gcd(R - 1, C + 1);
+            const g3 = gcd(R + 1, C - 1);
+            const g4 = gcd(R + 1, C + 1);
+            document.getElementById('valG1').innerText = g1;
+            document.getElementById('valG2').innerText = g2;
+            document.getElementById('valG3').innerText = g3;
+            document.getElementById('valG4').innerText = g4;
+
+            // Step 5: Master Conclusions
+            const step5 = document.getElementById('step5Conclusion');
+            let matchedRules = [];
+            if (checkFixedPointAt(r, c)) {
+                matchedRules.push(`<span class="text-emerald-400">符合目前的「${getRuleCompareName(currentRuleCompare)}」不動點判定。</span>`);
+            }
+            
+            // Check all other comparisons
+            const savedCurrent = currentRuleCompare;
+            const allTypes = ['HR_HC', 'HR_SR', 'HC_SC', 'HR_SC', 'HC_SR', 'SR_SC', 'D_D'];
+            let otherMatches = [];
+            for (const t of allTypes) {
+                currentRuleCompare = t;
+                if (checkFixedPointAt(r, c)) {
+                    otherMatches.push(getRuleCompareName(t));
+                }
+            }
+            currentRuleCompare = savedCurrent;
+
+            if (otherMatches.length > 0) {
+                step5.innerHTML = `🌟 本座標 (${r}, ${c}) 是以下比較規則下的不動點：<br>` + 
+                                  otherMatches.map(m => `👉 <span class="text-emerald-400 font-bold">${m}</span>`).join('<br>');
+            } else {
+                step5.innerHTML = `❌ 本座標 (${r}, ${c}) 在目前探討的七大填數規則比對下，皆不構成不動點。`;
+            }
+
+            // Update Theory Text Card based on chosen comparison
+            updateTheoryBlock(g1, g2, g3, g4);
+        }
+
+        // Get readable text of comparison name
+        function getRuleCompareName(type) {
+            switch(type) {
+                case 'HR_HC': return 'HR vs HC (標準對稱)';
+                case 'HR_SR': return 'HR vs SR (列向S型)';
+                case 'HC_SC': return 'HC vs SC (行向S型)';
+                case 'HR_SC': return 'HR vs SC (雙線共線)';
+                case 'HC_SR': return 'HC vs SR (轉置雙共線)';
+                case 'SR_SC': return 'SR vs SC (四線共點)';
+                case 'D_D':   return 'D_λ vs D_∠ (斜向分割)';
+            }
+            return '';
+        }
+
+        // Update visual explanation block
+        function updateTheoryBlock(g1, g2, g3, g4) {
+            const block = document.getElementById('theoryText');
+            switch(currentRuleCompare) {
+                case 'HR_HC':
+                    block.innerHTML = `<b>理論公差方程式：</b><br>
+                    1. 數量公式: N = gcd(R-1, C-1) + 1 = ${g1 + 1}<br>
+                    2. 等差數值一般式: V<sub>k</sub> = 1 + k × (RC - 1) / g<sub>1</sub><br>
+                    3. 公差為: <span class="text-emerald-400 font-bold">${((R*C-1)/g1).toFixed(2)}</span><br>
+                    在此規則中，不動點必定且唯一落在通過 (1,1) 與 (R,C) 之主對角線上。`;
+                    break;
+                case 'HR_SR':
+                    block.innerHTML = `<b>列向折返判定：</b><br>
+                    1. 奇數列時: H<sub>R</sub>(r,c) = S<sub>R</sub>(r,c) 恆成立，整列都是不動點。<br>
+                    2. 偶數列時: 僅當 C 為奇數，在垂直中線 c = (C+1)/2 = ${C % 2 !== 0 ? (C+1)/2 : "無解"} 存在不動點。<br>
+                    3. 總個數為: <span class="text-emerald-400 font-bold">${C % 2 !== 0 ? Math.ceil(R/2)*C + Math.floor(R/2) : Math.ceil(R/2)*C}</span>。`;
+                    break;
+                case 'HC_SC':
+                    block.innerHTML = `<b>行向折返判定：</b><br>
+                    1. 奇數行時: H<sub>C</sub>(r,c) = S<sub>C</sub>(r,c) 恆成立，整行都是不動點。<br>
+                    2. 偶數行時: 僅當 R 為奇數，在水平中線 r = (R+1)/2 = ${R % 2 !== 0 ? (R+1)/2 : "無解"} 存在不動點。<br>
+                    3. 總個數為: <span class="text-emerald-400 font-bold">${R % 2 !== 0 ? Math.ceil(C/2)*R + Math.floor(C/2) : Math.ceil(C/2)*R}</span>。`;
+                    break;
+                case 'HR_SC':
+                    block.innerHTML = `<b>雙線共線點集：</b><br>
+                    依 c 奇偶性分屬兩組對角線方程，點集合 I 數量由 g<sub>1</sub> = ${g1} 支配，點集合 II 數量由 g<sub>2</sub> = ${g2} 支配。<br>
+                    這兩條斜率相異之直線在實數坐報中必相交於棋盤中心點 ((R+1)/2, (C+1)/2)。`;
+                    break;
+                case 'HC_SR':
+                    block.innerHTML = `<b>轉置雙共線點集：</b><br>
+                    與 H<sub>R</sub> × S<sub>C</sub> 呈現轉置對稱。<br>
+                    點集合 I 共線於主對角線（列 r 為奇數）；點集合 II 共線於斜率相異之第二直線（列 r 為偶數），其變化量分母取 g<sub>3</sub> = ${g3}。`;
+                    break;
+                case 'SR_SC':
+                    block.innerHTML = `<b>四線中心共點性：</b><br>
+                    雙 S 型折返使不動點分化為 4 組獨立共線點集。無論棋盤大小，四條直線在實數坐標下皆<b>唯一共點於棋盤中心 ((R+1)/2, (C+1)/2)</b>。<br>
+                    僅在 R, C 皆為奇數時，該中心為整數點且為 4 組點集唯一共用不動點。`;
+                    break;
+                case 'D_D':
+                    block.innerHTML = `<b>斜向三區段分割規律：</b><br>
+                    依邊界限制在 C ≥ R 與 R ≥ C 下，精準分割成三個對角線區域討論。<br>
+                    第一區不動點落在 r = c 線上，第二區落在中線上，第三區落在平行主對角線上。數量達極值時為奇數正方形 (2R-1 個)。`;
+                    break;
+            }
+        }
+
+
+        /* ==========================================================================
+           THREE.JS 3D SPATIAL EXTENSION ENGINE
+           ========================================================================== */
+        
+        function initThreeJS() {
+            const container = document.getElementById('threeContainer');
+            if (!container) return;
+
+            // Scene, Camera, Renderer
+            threeScene = new THREE.Scene();
+            threeScene.background = new THREE.Color(0x0a0f1d);
+
+            threeCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 1, 1000);
+            threeCamera.position.set(10, 10, 15);
+            threeCamera.lookAt(0, 0, 0);
+
+            threeRenderer = new THREE.WebGLRenderer({ antialias: true });
+            threeRenderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(threeRenderer.domElement);
+
+            // Lighting Setup
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            threeScene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0x10b981, 0.8);
+            dirLight.position.set(5, 10, 7);
+            threeScene.add(dirLight);
+
+            // Add simple mouse movement camera rotate
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            
+            const dom = threeRenderer.domElement;
+            dom.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            dom.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const deltaMove = {
+                    x: e.clientX - previousMousePosition.x,
+                    y: e.clientY - previousMousePosition.y
+                };
+
+                // Simple orbit rotation implementation
+                const theta = deltaMove.x * 0.005;
+                const phi = deltaMove.y * 0.005;
+
+                // Orbit around lookAt center
+                const pos = threeCamera.position.clone();
+                const r = pos.length();
+                
+                let currentTheta = Math.atan2(pos.x, pos.z);
+                let currentPhi = Math.acos(pos.y / r);
+
+                currentTheta -= theta;
+                currentPhi = Math.max(0.1, Math.min(Math.PI - 0.1, currentPhi - phi));
+
+                threeCamera.position.x = r * Math.sin(currentPhi) * Math.sin(currentTheta);
+                threeCamera.position.y = r * Math.cos(currentPhi);
+                threeCamera.position.z = r * Math.sin(currentPhi) * Math.cos(currentTheta);
+                threeCamera.lookAt(0, 0, 0);
+
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            window.addEventListener('mouseup', () => { isDragging = false; });
+            
+            // Mouse wheel zoom
+            dom.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const zoomFactor = e.deltaY * 0.01;
+                const pos = threeCamera.position.clone();
+                const r = pos.length();
+                const newR = Math.max(5, Math.min(40, r + zoomFactor));
+                pos.setLength(newR);
+                threeCamera.position.copy(pos);
+            });
+
+            threeGridGroup = new THREE.Group();
+            threeScene.add(threeGridGroup);
+
+            isThreeInitialized = true;
+            animateThreeJS();
+        }
+
+        // Animate loop
+        function animateThreeJS() {
+            requestAnimationFrame(animateThreeJS);
+            if (threeRenderer && threeScene && threeCamera) {
+                // Auto rotate slowly if not dragging
+                threeGridGroup.rotation.y += 0.002;
+                threeRenderer.render(threeScene, threeCamera);
+            }
+        }
+
+        // Re-generate spatial objects based on R, C (scaled to a beautiful 3D 5x5x5 mock projection)
+        function updateThreeScene() {
+            if (!isThreeInitialized) return;
+
+            // Clear previous grid
+            while(threeGridGroup.children.length > 0) { 
+                const obj = threeGridGroup.children[0];
+                threeGridGroup.remove(obj); 
+            }
+
+            // Let's create an immersive 3D simulation of size L x W x H
+            // To make it clear, we use small scale L=5, W=5, H=5 to show spatial logic
+            const L3 = 5, W3 = 5, H3 = 5;
+            const sizeX = 5, sizeY = 5, sizeZ = 5;
+
+            // Create transparent cube wireframe bounding box
+            const boxGeo = new THREE.BoxGeometry(sizeX, sizeY, sizeZ);
+            const boxMat = new THREE.MeshBasicMaterial({
+                color: 0x475569,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.15
+            });
+            const outerBox = new THREE.Mesh(boxGeo, boxMat);
+            threeGridGroup.add(outerBox);
+
+            // Draw interior grid helper lines
+            const stepX = sizeX / (L3 - 1);
+            const stepY = sizeY / (W3 - 1);
+            const stepZ = sizeZ / (H3 - 1);
+
+            const lineMaterial = new THREE.LineBasicMaterial({ color: 0x1e293b, transparent: true, opacity: 0.5 });
+
+            for(let i = 0; i < L3; i++) {
+                for(let j = 0; j < W3; j++) {
+                    // Lines along Z
+                    const geoZ = new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(-sizeX/2 + i*stepX, -sizeY/2 + j*stepY, -sizeZ/2),
+                        new THREE.Vector3(-sizeX/2 + i*stepX, -sizeY/2 + j*stepY, sizeZ/2)
+                    ]);
+                    threeGridGroup.add(new THREE.Line(geoZ, lineMaterial));
+                }
+            }
+
+            for(let i = 0; i < L3; i++) {
+                for(let k = 0; k < H3; k++) {
+                    // Lines along Y
+                    const geoY = new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(-sizeX/2 + i*stepX, -sizeY/2, -sizeZ/2 + k*stepZ),
+                        new THREE.Vector3(-sizeX/2 + i*stepX, sizeY/2, -sizeZ/2 + k*stepZ)
+                    ]);
+                    threeGridGroup.add(new THREE.Line(geoY, lineMaterial));
+                }
+            }
+
+            for(let j = 0; j < W3; j++) {
+                for(let k = 0; k < H3; k++) {
+                    // Lines along X
+                    const geoX = new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(-sizeX/2, -sizeY/2 + j*stepY, -sizeZ/2 + k*stepZ),
+                        new THREE.Vector3(sizeX/2, -sizeY/2 + j*stepY, -sizeZ/2 + k*stepZ)
+                    ]);
+                    threeGridGroup.add(new THREE.Line(geoX, lineMaterial));
+                }
+            }
+
+            // Draw Spatial Body Diagonal Line (起點 to 終點)
+            const diagonalGeo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(-sizeX/2, -sizeY/2, -sizeZ/2),
+                new THREE.Vector3(sizeX/2, sizeY/2, sizeZ/2)
+            ]);
+            const diagonalMat = new THREE.LineBasicMaterial({ color: 0xf59e0b, linewidth: 3 }); // Gold color
+            const diagonalLine = new THREE.Line(diagonalGeo, diagonalMat);
+            threeGridGroup.add(diagonalLine);
+
+            // Generate Glow Points (representing the fixed points on spatial diagonal)
+            // L-1, W-1, H-1 mock GCD
+            const gSpace = gcd(L3-1, gcd(W3-1, H3-1)); // gcd(4,4,4) = 4, so N = 5 points
+            const pointGeo = new THREE.SphereGeometry(0.2, 16, 16);
+            const pointMat = new THREE.MeshToonMaterial({ color: 0x10b981, emissive: 0x047857 });
+
+            for(let k = 0; k <= gSpace; k++) {
+                const ratio = k / gSpace;
+                const ptX = -sizeX/2 + ratio * sizeX;
+                const ptY = -sizeY/2 + ratio * sizeY;
+                const ptZ = -sizeZ/2 + ratio * sizeZ;
+
+                const sphere = new THREE.Mesh(pointGeo, pointMat);
+                sphere.position.set(ptX, ptY, ptZ);
+                threeGridGroup.add(sphere);
+            }
+        }
+    </script>
+</body>
+</html>
